@@ -1,0 +1,344 @@
+---
+title: "Deploy Flask Application with Docker, Nginx and uWSGI"
+description: "This is my first blog post description"
+image: "../../public/blogs/emile-perron-xrVDYZRGdw4-unsplash.jpg"
+publishedAt: "2024-07-04"
+updatedAt: "2024-07-04"
+isPublished: true
+author: "Yahya Machat"
+tags:
+- python
+- flask
+- docker
+- uWSGI
+- nginx
+- deployment
+---
+
+In today's web development landscape, deploying web applications requires a robust architecture that ensures scalability, security, and optimal performance. This blog post explores the deployment of a Flask application using NGINX as a reverse proxy server and uWSGI as a WSGI server. This architecture not only enhances the application's ability to handle high traffic but also improves security through SSL/TLS encryption and provides efficient load balancing capabilities.
+
+
+>The following sections will detail the components involved, the typical request flow from client to application, and the advantages of this architectural approach.
+
+## Architecture
+
+<Image
+  src="/blogs/Flask_App_with_uWSGI_and_NGINX.png"
+  width="718"
+  height="404"
+  alt="Image"
+  sizes="100vw"
+  className="align-middle self-center w-full h-auto rounded-lg"
+/>
+
+### Components
+
+- **Client:** This is the user or application that interacts with the web application. It can be a web browser, mobile device, or another software application.
+ 
+- **NGINX:** NGINX is a reverse proxy server that sits in front of the web server (uWSGI) and the Flask application. It acts as a load balancer, distributing traffic among multiple web servers and improving the application's performance and scalability. NGINX can also handle SSL/TLS encryption and decryption, improve security.
+
+- **uWSGI:** uWSGI is a web server gateway interface (WSGI) server. It translates requests from the reverse proxy server (NGINX) into a format that the Flask application can understand and vice versa.
+ 
+- **Flask application:** This is the Python web application built with the Flask framework. It handles the application logic, such as processing user input, interacting with databases, and generating responses.
+
+- **Docker:** Provides containerization for the Flask application, facilitating deployment and scalability.
+
+
+### Scenario
+
+**1.Client sends a request:** The client (web browser, mobile device, etc.) initiates a request to the web application by entering a URL in the address bar or clicking on a link. The request includes information about the requested resource, such as the path, headers, and any data being sent to the server (e.g., form data).
+
+**2.Request reaches NGINX:** The request is routed to the NGINX server.
+
+**3.NGINX distributes request:** NGINX can handle multiple web servers running the Flask application. It distributes the request to an available uWSGI web server.
+
+**4.uWSGI translates request:** The uWSGI server receives the request from NGINX and translates it into a format that the Flask application can understand (WSGI).
+
+**5.uWSGI forwards request to Flask:** uWSGI forwards the translated request to the Flask application.
+
+**6.Flask application processes request:** The Flask application processes the request, which may involve interacting with a database, performing calculations, or generating content.
+
+**7.Flask generates response:** The Flask application generates a response that includes the requested data (e.g., HTML content, JSON data) and an HTTP status code (e.g., 200 OK, 404 Not Found).
+
+**8.Flask sends response to uWSGI:** The Flask application sends the response back to the uWSGI server.
+
+**9.uWSGI translates response:** uWSGI translates the response back into a format that NGINX can understand (usually HTTP).
+
+**10.uWSGI sends response to NGINX:** uWSGI forwards the translated response to NGINX.
+
+**11.NGINX sends response to client:** NGINX sends the response back to the client.
+
+**12.Client receives response:** The client receives the response from NGINX and displays it to the user (e.g., renders an HTML page in the web browser).
+
+### Benefits of this architecture
+
+* **Scalability:** NGINX can distribute traffic among multiple web servers, which allows the application to handle a high volume of traffic.
+
+* **Security:** NGINX can handle SSL/TLS encryption and decryption, which helps to protect sensitive data transmissions between the client and the server.
+
+* **Performance:** NGINX can cache static content, such as images and CSS files, which can improve the application's performance.
+
+* **Load balancing:** NGINX can distribute traffic among multiple web servers, which helps to improve the application's responsiveness.
+
+## Implementation
+
+### Docker Configuration
+
+#### Dockerfile
+
+```Dockerfile
+FROM python:3.11-alpine
+
+RUN mkdir /install
+WORKDIR /install
+COPY requirements.txt /requirements.txt
+
+RUN apk update \
+ && apk add  --no-cache libpq libstdc++ nginx python3-dev build-base uwsgi uwsgi-python3 shadow linux-headers musl-dev \
+ && pip3 install --upgrade pip \
+ && pip install --prefix=/install --no-warn-script-location -r /requirements.txt \
+ && find /install \
+     \( -type d -a -name test -o -name tests \) \
+     -o \( -type f -a -name '*.pyc' -o -name '*.pyo' \) \
+     -exec rm -rf '{}' + \
+ && runDeps="$( \
+     scanelf --needed --nobanner --recursive /install \
+             | awk '{ gsub(/,/, "\nso:", $2); print "so:" $2 }' \
+             | sort -u \
+             | xargs -r apk info --installed \
+             | sort -u \
+ )" \
+ && apk add --virtual .rundeps $runDeps
+
+FROM python:3.11-alpine
+RUN pip freeze --all | grep -v pip | cut -d== -f1 | xargs pip uninstall -y && pip  install --upgrade pip 
+#Copy python and alpine dependencies
+COPY --from=0 /install /usr/local
+
+RUN apk --no-cache add linux-headers musl-dev
+
+RUN pip install --upgrade pip
+
+RUN mkdir /app
+COPY . /app/
+WORKDIR /app
+
+RUN find -name '*.sh' -exec chmod +x {} \;
+ENV PYTHONUNBUFFERED=0
+CMD ["sh", "-c", "tail -f /dev/null"]
+```
+
+#### docker compose file
+
+```yml
+version: '3.5'
+services:
+  pc-builder-app:
+    container_name: pc-builder-app
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - 5000:5000
+    volumes:
+      - .:/app
+    environment:
+      - LOG_LEVEL=INFO
+      - DOMAIN=/pc-builder-app
+      - ENV=PROD
+    command: sh -c "chmod +x ./entrypoint.sh && ./entrypoint.sh"
+```
+
+### uWSGI
+
+1- Add uwsgi uwsgi-python3 alpine packages in Dokerfile
+```yml
+RUN apk add uwsgi uwsgi-python3
+```
+2- Add uWSGI python package in requirements.txt
+```
+uWSGI==2.0.25.1
+```
+
+3- Add uWsgi run app command in entrypoint.sh
+```shell
+uwsgi --http 0.0.0.0:5000  --wsgi-file /app/app.py --callable app
+```
+
+4- Run entrypoint.sh in docker-compose service command
+```yml
+version: '3.5'
+services:
+  pc-builder-app:
+    container_name: pc-builder-app
+    ...
+    command: sh -c "chmod +x ./entrypoint.sh && ./entrypoint.sh"
+```
+
+5- uWSGI + Flask app logs
+```log
+2024-05-26 14:16:06,188 INFO [PcBuilderApp] 58 Components retrieved successfully
+[pid: 8|app: 0|req: 7/7] 172.22.0.5 () {64 vars in 1305 bytes} [Sun May 26 14:16:06 2024] GET /pc-builder-app/main => generated 11710 bytes in 10 msecs (HTTP/1.0 200) 2 headers in 82 bytes (1 switches on core 0)
+[pid: 8|app: 0|req: 8/8] 172.22.0.5 () {62 vars in 1239 bytes} [Sun May 26 14:16:06 2024] GET /pc-builder-app/static/css/base.css => generated 0 bytes in 2 msecs (HTTP/1.0 304) 4 headers in 182 bytes (0 switches on core 0)
+[pid: 8|app: 0|req: 9/9] 172.22.0.5 () {62 vars in 1220 bytes} [Sun May 26 14:16:06 2024] GET /pc-builder-app/static/js/main.js => generated 0 bytes in 1 msecs (HTTP/1.0 304) 4 headers in 181 bytes (0 switches on core 0)
+[pid: 8|app: 0|req: 10/10] 172.22.0.5 () {62 vars in 1239 bytes} [Sun May 26 14:16:06 2024] GET /pc-builder-app/static/css/main.css => generated 0 bytes in 1 msecs (HTTP/1.0 304) 4 headers in 183 bytes (0 switches on core 0)
+[pid: 8|app: 0|req: 11/11] 172.22.0.5 () {62 vars in 1309 bytes} [Sun May 26 14:16:06 2024] GET /pc-builder-app/static/images/ccmainbanner-1.jpg => generated 0 bytes in 2 msecs (HTTP/1.0 304) 4 headers in 191 bytes (0 switches on core 0)
+```
+
+### Nginx
+
+1- Add nginx docker service 
+```yml
+version: '3.5'
+services:
+  ...
+  nginx:
+    image: nginx:latest
+    container_name: nginx
+    ports:
+      - "8080:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./nginx/conf.d:/etc/nginx/conf.d
+```
+
+2- Add nginx reverse proxy config in /etc/nginx/conf.d/default.conf
+
+```nginx
+server {
+    listen       80;
+    listen  [::]:80;
+    server_name  localhost;
+    location / {
+        proxy_pass http://pc-builder-app:5000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+    error_page   500 502 503 504  /50x.html;
+    location = /50x.html {
+        root   /usr/share/nginx/html;
+    }
+}
+```
+3- nginx logs
+```log
+172.22.0.1 - admin [26/May/2024:12:35:43 +0000] "GET /pc-builder-app/table HTTP/1.1" 200 18643 "http://localhost:8080/pc-builder-app/main" "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36" "-"
+172.22.0.1 - admin [26/May/2024:12:35:43 +0000] "GET /pc-builder-app/static/css/base.css HTTP/1.1" 304 0 "http://localhost:8080/pc-builder-app/table" "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36" "-"
+172.22.0.1 - admin [26/May/2024:12:35:43 +0000] "GET /pc-builder-app/static/css/table.css HTTP/1.1" 304 0 "http://localhost:8080/pc-builder-app/table" "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36" "-"
+172.22.0.1 - admin [26/May/2024:12:35:43 +0000] "GET /pc-builder-app/static/js/table.js HTTP/1.1" 304 0 "http://localhost:8080/pc-builder-app/table" "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36" "-"
+172.22.0.1 - admin [26/May/2024:12:35:43 +0000] "GET /pc-builder-app/static/images/ccmainbanner-1.jpg HTTP/1.1" 304 0 "http://localhost:8080/pc-builder-app/table" "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36" "-"
+```
+
+## Production Deployment
+
+> For this is demo pc-builder-app is the name of the Flask application
+
+### NGINX Configuration
+Under '**_/etc/nginx/conf.d/server.conf_**' add flask app location : 
+```
+location /pc-builder-app/ {
+        proxy_pass             http://127.0.0.1:5001;
+        proxy_read_timeout     60;
+        proxy_connect_timeout  60;
+        proxy_redirect         off;
+
+        # Allow the use of websockets
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+   }
+```
+>In this demo we are using '**/pc-builder-app/**' as subdomain
+
+### Docker Configuration
+In the docker-compose file, Add Domain and Environment to the flask app environment variables running with docker : 
+
+```
+services:
+  pc-builder-app:
+    container_name: pc-builder-app
+    ...
+    environment:
+      - DOMAIN=/pc-builder-app
+      - ENV=PROD
+    ...
+```
+
+### Flask app configuration
+- In app.py (main.py) : 
+
+Implement Flask Blueprint to add app domain/subdomain to all application routes, templates and static files.
+
+```
+from flask import Flask, Blueprint
+
+#Import of environment variables
+environment = os.environ['ENV']
+app_domain = os.environ['DOMAIN'] if environment == 'PROD' else ''
+
+app_bp = Blueprint('app_bp', __name__,
+    template_folder='templates',
+    static_folder='static')
+
+#Apply Bluprint 'app_bp' to route
+@app_bp.route('/')
+def home():
+    return render_template('index.html', app_domain=app_domain)
+
+#Apply Blueprint with url_prefix in production mode after all routes
+if environment == "PROD":
+    app.register_blueprint(app_bp, url_prefix=app_domain)
+else:
+    app.register_blueprint(app_bp)
+
+if __name__ == "__main__":
+...
+```
+- In template files : 
+
+1 - Pass app_domain to route props : 
+
+```
+app_domain = os.environ['DOMAIN'] if environment == 'PROD' else ''
+
+@app_bp.route('/')
+def home():
+    return render_template('index.html', app_domain=app_domain)
+```
+
+2 - Add app_domain to css link stylesheet, js script, images and a tag href : 
+
+```
+<script src="..{{ app_domain }}/static/js/main.js"></script>
+
+<link rel="stylesheet" href="..{{ app_domain }}/static/css/main.css" />
+
+<img src="..{{ app_domain }}/static/images/ccmainbanner-1.jpg" alt="" />
+
+#link to main.html (/main)
+<a class="btn btn-success" href="{{ url_for('app_bp.main') }}">Build your own PC</a>
+```
+
+- In JS files :
+
+1 - Pass app_domain (eg : main.html)  with the script tag : 
+
+```
+<script>var appDomain = "{{ app_domain }}";</script>
+```
+
+2 - consume app_domain in dedicated JS file (eg : main.js) : 
+
+```
+window.document.location = appDomain + "/order";
+```
+
+## Summary
+>Deploying a Flask application with NGINX and uWSGI provides a robust foundation for scalable and secure web applications. By leveraging NGINX's capabilities as a reverse proxy server and uWSGI's efficient handling of WSGI requests, you can enhance your application's performance and reliability. This architecture not only facilitates load balancing and SSL/TLS encryption but also streamlines deployment processes in production environments.
+
+In summary, understanding and implementing this architecture ensures that your Flask applications are well-equipped to handle varying levels of traffic while maintaining high standards of security and performance.

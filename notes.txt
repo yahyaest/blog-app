@@ -1,0 +1,6 @@
+use npm i --force or npm i --legacy-peer-deps in Docker later
+cause 
+next@"14.2.4" from the root project
+npm ERR! 
+npm ERR! Could not resolve dependency:
+npm ERR! peer next@"^12 || ^13" from next-contentlayer@0.3.4

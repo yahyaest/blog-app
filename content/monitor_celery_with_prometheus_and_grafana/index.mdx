@@ -1,0 +1,263 @@
+---
+title: "Monitor Celery With Prometheus and Grafana"
+description: "This is my first blog post description"
+image: "../../public/blogs/lauren-mancke-aOC7TSLb1o8-unsplash.jpg"
+publishedAt: "2024-07-04"
+updatedAt: "2024-07-04"
+isPublished: true
+author: "Yahya Machat"
+tags:
+- python
+- docker
+- celery
+- grafana
+- prometheus
+- monitoring
+---
+
+Celery, a robust Python-based asynchronous task queue, is essential for managing distributed tasks like email sending, data processing, and job scheduling. Monitoring Celery's performance and metrics is crucial for maintaining application reliability and efficiency.
+
+Prometheus is a leading monitoring system that gathers real-time metrics from various sources, offering efficient time-series data storage. Grafana provides customizable dashboards for visualizing metrics, enabling teams to monitor system performance effectively.
+
+Integrating Prometheus and Grafana with Celery allows teams to monitor metrics such as task execution times, queue lengths, worker activity, and resource utilization. This setup supports proactive bottleneck identification, performance optimization, and ensures smooth operation of Celery-based applications.
+
+>In this guide, we'll demonstrate how to set up Prometheus to collect Celery metrics and utilize Grafana for insightful metric visualization, empowering you to effectively monitor and manage Celery workflows in your applications.
+
+---
+
+## 1- Architecture
+
+This document outlines the architecture for monitoring Celery tasks using Prometheus and Grafana. This setup allows you to visualize key metrics and gain insights into the health and performance of your Celery workers.
+
+
+
+<Image
+  src="/blogs/celery_monitoring.png"
+  width="718"
+  height="404"
+  alt="Image"
+  sizes="100vw"
+  className="align-middle self-center w-full h-auto rounded-lg"
+/>
+
+### Architecture Overview
+The architecture consists of three main components:
+
+#### Celery Exporter
+This tool acts as a bridge between Celery and Prometheus. It captures the Celery Events and translates them into quantifiable metrics suitable for monitoring.
+
+#### Prometheus
+Prometheus is an open-source monitoring application that scrapes (collects) metrics from various sources, including the Celery Exporter. It stores these metrics in a time-series database. 
+
+#### Grafana
+Grafana is an open-source tool, utilizes Prometheus as a data source to create informative dashboards that visualize the collected Celery metrics.
+
+---
+
+## 2- Docker Configuration
+Add these  docker services (Either use redis with redis-exporter or rabbitmq with rabbitmq-exporter) : 
+
+### redis 
+A key-value store used as a message broker in this setup. It's lightweight and commonly used for caching and queuing tasks.
+
+### rabbitMQ
+Another message broker, providing more advanced queuing features compared to Redis. It's highly reliable and supports multiple messaging protocols.
+
+### redis-exporter
+Collects metrics from Redis for monitoring purposes. It exposes Redis metrics in a format that Prometheus can scrape.
+
+### rabbitMQ-exporter
+Gathers metrics from RabbitMQ for monitoring. It fetches metrics from RabbitMQ's management API and presents them in a format suitable for Prometheus.
+
+* You need to enable rabbitmq_prometheus plugin in rabbitmq container
+* https://www.rabbitmq.com/docs/prometheus
+
+```shell
+rabbitmq-plugins enable rabbitmq_prometheus
+```
+
+
+#### config.example.json file
+```json
+{
+  "rabbit_url": "http://rabbitmq:15672",
+  "rabbit_user": "admin",
+  "rabbit_pass": "admin",
+  "publish_port": "9419",
+  "publish_addr": "",
+  "output_format": "TTY",
+  "ca_file": "ca.pem",
+  "cert_file": "client-cert.pem",
+  "key_file": "client-key.pem",
+  "insecure_skip_verify": false,
+  "exlude_metrics": [],
+  "include_exchanges": ".*",
+  "skip_exchanges": "^$",
+  "include_queues": ".*",
+  "skip_queues": "^$",
+  "skip_vhost": "^$",
+  "include_vhost": ".*",
+  "rabbit_capabilities": "no_sort,bert",
+  "aliveness_vhost": "/",
+  "enabled_exporters": ["exchange", "node", "overview", "queue", "aliveness"],
+  "timeout": 30,
+  "max_queues": 0
+}
+
+```
+
+
+
+### celery-exporter
+Monitors Celery workers and exports their metrics for Prometheus. It communicates with the message broker specified (Redis or RabbitMQ) to gather metrics.
+
+
+### prometheus
+A monitoring and alerting toolkit. It collects metrics from configured targets, stores them, and makes them available for querying and visualization.
+
+#### prometheus.yml file
+
+```yml
+global:
+  scrape_interval:     15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: prometheus
+    static_configs:
+      - targets: ['localhost:9090']
+  - job_name: celery-exporter
+    static_configs:
+      - targets: ['celery-exporter:9808']
+  # Redis exporter
+  - job_name: redis-exporter
+    static_configs:
+      - targets: ['redis-exporter:9121']
+  # RabbitMQ exporter
+  - job_name: rabbitmq
+    static_configs:
+      - targets: ['rabbitmq:15692']
+  - job_name: rabbitmq-exporter
+    static_configs:
+      - targets: ['rabbitmq-exporter:9419']
+```
+
+### grafana
+A platform for monitoring and observability. It provides a customizable dashboard for visualizing data from various sources, including Prometheus. It helps in understanding system performance and identifying issues.
+
+### Docker Compose File
+Celery Use message broker to queue task and distribute them tp workers.
+
+Celery support both redis and rabbitmq.
+
+This docker compose file contains both configuration for redis and rabbitmq
+
+You can choose either Redis or RabbitMQ based on your requirements.
+
+>For this setup, both redis and rabbitmq exporters are optional. 
+
+```yml
+version: "3"
+services:
+
+  ...
+  ...
+  ...
+
+  # Message Broker Either Redis or RabbitMQ
+  redis:
+    image: "redis:alpine"
+    container_name: redis
+    networks:
+      - task-scheduler-app-networks
+  
+  rabbitmq:
+    image: rabbitmq:management
+    container_name: rabbitmq
+    ports:
+      - 5672:5672
+      - 15672:15672
+      - 15692:15692
+    networks:
+      - task-scheduler-app-networks
+    environment:
+      RABBITMQ_DEFAULT_USER: "admin"
+      RABBITMQ_DEFAULT_PASS: "admin"
+
+
+  celery-exporter:
+    image: danihodovic/celery-exporter
+    container_name: celery_exporter
+    ports:
+      - "9808:9808"
+    environment:
+      - CE_BROKER_URL=redis://redis:6379
+      # - CE_BROKER_URL=amqp://admin:admin@rabbitmq:5672  # Case Message Broker RabbitMQ 
+    networks:
+      - task-scheduler-app-networks
+  
+  # Case Message Broker is Redis
+  redis-exporter:
+    image: oliver006/redis_exporter:alpine
+    container_name: redis_exporter
+    restart: unless-stopped
+    ports:
+      - 9121:9121
+    environment:
+      - REDIS_ADDR=redis://redis:6379
+    networks:
+      - task-scheduler-app-networks
+  # Case Message Broker is RabbitMQ
+  rabbitmq-exporter:
+    image: kbudde/rabbitmq-exporter
+    container_name: rabbitmq_exporter
+    restart: unless-stopped
+    ports:
+      - 9419:9419
+    volumes:
+      - ./rabbitmq_exporter/config.example.json:/conf/rabbitmq.conf
+    networks:
+      - task-scheduler-app-networks
+  
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml # absolute path will be required
+      - ./prometheus/prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--web.enable-lifecycle'
+    restart: unless-stopped
+    ports:
+      - 9090:9090
+    labels:
+      org.label-schema.group: "monitoring"
+    networks:
+      - task-scheduler-app-networks
+    # sudo chmod -R 777 ./prometheus/prometheus_data
+
+  grafana:
+    image: grafana/grafana:10.2.6
+    container_name: grafana
+    restart: unless-stopped
+    ports:
+      - 3333:3000
+    volumes:
+      - grafana-data:/var/lib/grafana
+    labels:
+      org.label-schema.group: "monitoring"
+    networks:
+      - task-scheduler-app-networks
+
+
+volumes:
+  grafana-data:
+```
+
+---
+## 3- Results
+
