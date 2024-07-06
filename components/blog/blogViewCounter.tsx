@@ -1,70 +1,36 @@
-"use client";
-// import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
-import React, { useEffect, useState } from "react";
+"use server";
+import React from "react";
 
-// const supabase = createClientComponentClient();
-
-const BlogViewCounter = ({ slug, noCount = false, showCount = true }) => {
-  const [views, setViews] = useState(0);
-
-  // useEffect(() => {
-  //   const incrementView = async () => {
-  //     try {
-  //       let { error } = await supabase.rpc("increment", {
-  //         slug_text:slug ,
-  //       });
-
-  //       if (error){
-  //           console.error("Error incrementing view count inside try block:", error)
-  //       };
-
-  //     } catch (error) {
-  //       console.error(
-  //         "An error occurred while incrementing the view count:",
-  //         error
-  //       );
-  //     }
-  //   };
-
-  //   if(!noCount){
-  //       incrementView();
-  //   }
-  // }, [slug, noCount]);
-
-  // useEffect(() => {
-  //   const getViews = async () => {
-  //     try {
-  //       let { data, error } = await supabase
-  //         .from("views")
-  //         .select("count")
-  //         .match({ slug: slug })
-  //         .single();
-
-  //       if (error) {
-  //         console.error(
-  //           "Error incrementing view count inside try block:",
-  //           error
-  //         );
-  //       }
-
-  //       setViews(data ? data.count : 0);
-  //     } catch (error) {
-  //       console.error(
-  //         "An error occurred while incrementing the view count:",
-  //         error
-  //       );
-  //     }
-  //   };
-
-  //   getViews();
-  // }, [slug]);
-
-  if (showCount) {
-    // return <div>{views} views</div>;
-    return <div>{Math.floor(Math.random() * 100)} views</div>;
-  } else {
-    return null;
+const fetchBlogsViews = async () => {
+  try {
+    //TODO set BASE_URL when implementing docker
+    const response = await fetch("http://localhost:3000/api/blogsViews");
+    if (!response.ok) {
+      console.error(`HTTP error! Status: ${response.status}`);
+    }
+    const blogsViews: { [name: string]: number } = await response.json();
+    return blogsViews;
+  } catch (error) {
+    console.error("Failed to fetch blogs views:", error);
+    return {};
   }
 };
 
-export default BlogViewCounter;
+export default async function BlogViewCounter({
+  slug,
+  noCount = false,
+  showCount = true,
+}: {
+  slug: string;
+  noCount?: boolean;
+  showCount?: boolean;
+}) {
+  const blogsViews: { [name: string]: number } = await fetchBlogsViews();
+  const views = blogsViews[slug] || 0;
+
+  if (showCount) {
+    return <div>{views} views</div>;
+  } else {
+    return null;
+  }
+}

@@ -1,3 +1,4 @@
+import BlogCookies from "@/components/blog/blogCookies";
 import BlogDetails from "@/components/blog/blogDetails";
 import BlogRenderMdx from "@/components/blog/blogRenderMdx";
 import Tag from "@/components/ui/tag";
@@ -25,7 +26,7 @@ export async function generateMetadata({ params }: any) {
     imageList =
       typeof blog.image.filePath === "string"
         ? [siteMetadata.siteUrl + blog.image.filePath.replace("../public", "")]
-        : blog.image as string[] | any ;
+        : (blog.image as string[] | any);
   }
   const ogImages = imageList.map((img) => {
     return { url: img.includes("http") ? img : siteMetadata.siteUrl + img };
@@ -93,6 +94,7 @@ export default function BlogPage({ params }: any) {
 
   return (
     <>
+      <BlogCookies blogSlug={params.slug} />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
