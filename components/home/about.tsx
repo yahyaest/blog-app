@@ -4,7 +4,7 @@ import MagicButton from "../ui/MagicButton";
 
 const About = () => {
   return (
-    <div className="pb-20 pt-36">
+    <div id="about" className="pb-20 pt-36">
       {/**
        *  UI: grid
        *  change bg color to bg-black-100 and reduce grid color from
