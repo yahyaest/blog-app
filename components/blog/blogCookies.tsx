@@ -91,7 +91,5 @@ export default function BlogCookies({ blogSlug }: { blogSlug: string }) {
     initializeSession();
   }, []);
 
-  console.log(blogsViews);
-
   return <React.Fragment></React.Fragment>;
 }

@@ -4,7 +4,8 @@ import React from "react";
 const fetchBlogsViews = async () => {
   try {
     //TODO set BASE_URL when implementing docker
-    const response = await fetch("http://localhost:3000/api/blogsViews");
+    // Adding { cache: 'no-store' } to avoid caching since fetch by default caches the response
+    const response = await fetch("http://localhost:3000/api/blogsViews", { cache: 'no-store' });
     if (!response.ok) {
       console.error(`HTTP error! Status: ${response.status}`);
     }

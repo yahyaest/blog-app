@@ -8,7 +8,7 @@ export async function getCookiesSession() {
   try {
     const session = cookies().get("session")?.value;
     if (session) {
-      console.log("Getting cookies session: ", session);
+      // console.log("Getting cookies session: ", session);
       return decodeFromBase64(session);
     }
     return null;
