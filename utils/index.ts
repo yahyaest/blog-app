@@ -1,14 +1,46 @@
+import { Blog } from "@/.contentlayer/generated";
 import { compareDesc, parseISO } from "date-fns";
 
 export const cx = (...classNames: string[] | any[]) =>
   classNames.filter(Boolean).join(" ");
 
-export const sortBlogsByDate = (blogs: any[]) => {
+export const sortBlogsByDate = (blogs: Blog[]) => {
   return blogs
     .slice()
     .sort((a, b) =>
       compareDesc(parseISO(a.publishedAt), parseISO(b.publishedAt))
     );
+};
+
+export const sortBlogsByViews = async (blogs: Blog[]) => {
+  try {
+    const blogsWithViews = [...blogs];
+    // Fetch the blogsViews from the server
+    const response = await fetch("http://localhost:3000/api/blogsViews", {
+      cache: "no-store",
+    });
+    if (!response.ok) {
+      console.error(`HTTP error! Status: ${response.status}`);
+    }
+    const blogsViews: { [name: string]: number } = await response.json();
+
+    for (const blog of blogsWithViews) {
+      for (const key of Object.keys(blogsViews)) {
+        if (blog._raw.flattenedPath === key) {
+          blog.views = blogsViews[key];
+          continue;
+        }
+      }
+    }
+
+    return blogsWithViews
+      .filter((blog) => blog.isPublished)
+      .slice()
+      .sort((a, b) => b.views - a.views);
+  } catch (e) {
+    console.error("Failed to sort blogs by views:", e);
+    return blogs;
+  }
 };
 
 // Function to encode JSON object to Base64

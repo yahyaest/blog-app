@@ -26,6 +26,7 @@ export type Blog = {
   url: string
   readingTime: json
   toc: json
+  views: number
 }  
 
 /** Nested types */
