@@ -2,6 +2,7 @@ import Link from "next/link";
 import React from "react";
 import { sortBlogsByDate } from "@/utils";
 import BlogCard from "../blog/blogCard";
+import { Blog } from "@/.contentlayer/generated";
 
 const RecentPosts = ({ blogs }:any) => {
   const sortedBlogs = sortBlogsByDate(blogs);
@@ -20,7 +21,7 @@ const RecentPosts = ({ blogs }:any) => {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 grid-rows-2 gap-16 mt-16">
-        {sortedBlogs.slice(0, 6).map((blog, index) => {
+        {sortedBlogs.filter((blog : Blog) => blog.isPublished).slice(0, 6).map((blog, index) => {
           return (
             <article key={index} className="col-span-1 row-span-1 relative">
               <BlogCard blog={blog} />
