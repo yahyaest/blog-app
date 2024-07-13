@@ -1,4 +1,5 @@
-import { allBlogs } from "@/.contentlayer/generated";
+import { Blog, allBlogs } from "@/.contentlayer/generated";
+import BlogLayoutThree from "@/components/blog/BlogLayoutThree";
 import BlogCard from "@/components/blog/blogCard";
 import Categories from "@/components/blog/categories";
 import GithubSlugger, { slug } from "github-slugger";
@@ -24,7 +25,7 @@ export async function generateStaticParams() {
   return paths;
 }
 
-export async function generateMetadata({ params } : any) {
+export async function generateMetadata({ params }: any) {
   return {
     title: `${params.slug.replaceAll("-", " ")} Blogs`,
     description: `Learn more about ${
@@ -33,7 +34,7 @@ export async function generateMetadata({ params } : any) {
   };
 }
 
-const CategoryPage = ({ params } : any) => {
+const CategoryPage = ({ params }: any) => {
   // Separating logic to create list of categories from all blogs
   const allCategories = ["all"]; // Initialize with 'all' category
   allBlogs.forEach((blog: any) => {
@@ -49,12 +50,14 @@ const CategoryPage = ({ params } : any) => {
   allCategories.sort();
 
   // Step 2: Filter blogs based on the current category (params.slug)
-  const blogs = allBlogs.filter((blog: any) => {
-    if (params.slug === "all") {
-      return true; // Include all blogs if 'all' category is selected
-    }
-    return blog.tags.some((tag : string) => slug(tag) === params.slug);
-  });
+  const blogs = allBlogs
+    .filter((blog: Blog) => blog.isPublished)
+    .filter((blog: Blog) => {
+      if (params.slug === "all") {
+        return true; // Include all blogs if 'all' category is selected
+      }
+      return blog.tags?.some((tag: string) => slug(tag) === params.slug);
+    });
 
   return (
     <article className="mt-12 flex flex-col text-dark dark:text-light">
@@ -68,10 +71,11 @@ const CategoryPage = ({ params } : any) => {
       </div>
       <Categories categories={allCategories} currentSlug={params.slug} />
 
-      <div className="grid  grid-cols-1 sm:grid-cols-2  lg:grid-cols-3 grid-rows-2 gap-16 mt-5 sm:mt-10 md:mt-24 sxl:mt-32 px-5 sm:px-10 md:px-24 sxl:px-32">
+      <div className="mt-5 sm:mt-10 md:mt-24 sxl:mt-32 px-5 sm:px-10 md:px-24 sxl:px-32">
         {blogs.map((blog, index) => (
-          <article key={index} className="col-span-1 row-span-1 relative">
-            <BlogCard blog={blog} />
+          <article key={index} className="my-10 md:my-20 col-span-1 row-span-1 relative">
+            {/* <BlogCard blog={blog} /> */}
+            <BlogLayoutThree blog={blog} />
           </article>
         ))}
       </div>
