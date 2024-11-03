@@ -53,16 +53,38 @@ const Blog = defineDocumentType(() => ({
     toc: {
       type: "json",
       resolve: async (doc) => {
-        const regulrExp = /\n(?<flag>#{1,6})\s+(?<content>.+)/g;
+        // const regulrExp = /\n(?<flag>#{1,6})\s+(?<content>.+)/g;
+        const regulrExp = /\n(#{1,6})\s+(.+)/g;
+
         const slugger = new GithubSlugger();
+        // const headings = Array.from(doc.body.raw.matchAll(regulrExp)).map(
+        //   ({ groups }: any) => {
+        //     const flag = groups?.flag;
+        //     const content = groups?.content;
+
+        //     return {
+        //       level:
+        //         flag?.length == 1 ? "one" : flag?.length == 2 ? "two" : flag?.length == 3 ? "three" : "four",
+        //       text: content,
+        //       slug: content ? slugger.slug(content) : undefined,
+        //     };
+        //   }
+        // );
+
         const headings = Array.from(doc.body.raw.matchAll(regulrExp)).map(
-          ({ groups }: any) => {
-            const flag = groups?.flag;
-            const content = groups?.content;
+          (match) => {
+            const flag = match[1]; // The first capture group: hash marks
+            const content = match[2]; // The second capture group: heading content
 
             return {
               level:
-                flag?.length == 1 ? "one" : flag?.length == 2 ? "two" : flag?.length == 3 ? "three" : "four",
+                flag.length === 1
+                  ? "one"
+                  : flag.length === 2
+                  ? "two"
+                  : flag.length === 3
+                  ? "three"
+                  : "four",
               text: content,
               slug: content ? slugger.slug(content) : undefined,
             };

@@ -21,21 +21,21 @@ const Logo = () => {
       <div className=" w-12 md:w-16 rounded-full overflow-hidden border border-solid border-dark dark:border-gray  mr-2 md:mr-4">
         <Image
           src={profileImg}
-          alt="CodeBucks logo"
+          alt="The Full Stack Blog logo"
           className="w-full h-auto rounded-full"
           sizes="20vw"
           priority
         />
       </div>
       <span className="font-bold dark:font-semibold text-lg md:text-xl">
-        CodeBucks
+      The Full Stack Blog
       </span>
     </Link>
   );
 };
 
 function Header() {
-  const [mode, setMode] = useThemeSwitch();
+  const [mode, setMode] = useThemeSwitch() as any;
   const [click, setClick] = useState(false);
 
   const toggle = () => {
@@ -155,15 +155,6 @@ function Header() {
           target="_blank"
         >
           <LinkedinIcon className="hover:scale-125 transition-all ease duration-200" />
-        </a>
-        <a
-          href={siteMetadata.twitter}
-          rel="noopener noreferrer"
-          className="inline-block w-6 h-6 mr-4"
-          aria-label="Reach out to me via Twitter"
-          target="_blank"
-        >
-          <TwitterIcon className="hover:scale-125 transition-all ease duration-200" />
         </a>
         <a
           href={siteMetadata.github}

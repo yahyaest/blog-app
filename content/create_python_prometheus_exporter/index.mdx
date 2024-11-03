@@ -1,0 +1,171 @@
+---
+title: " Creating a Python Prometheus Exporter with prometheus-client and Docker"
+description: "Monitoring the performance and health of applications and services is crucial for ensuring reliability and scalability.\n Prometheus is a popular open-source monitoring and alerting toolkit that collects metrics from configured targets at specified intervals.\n In this tutorial, we will explore how to create a custom Prometheus exporter in Python using `prometheus-client`, and integrate it with Prometheus and Grafana using Docker."
+image: "../../public/blogs/create_python_prometheus_exporter.png"
+publishedAt: "2024-07-04"
+updatedAt: "2024-07-04"
+isPublished: true
+author: "Yahya Machat"
+tags:
+- python
+- docker
+- grafana
+- prometheus
+- monitoring
+---
+
+
+Monitoring the performance and health of applications and services is crucial for ensuring reliability and scalability. Prometheus is a popular open-source monitoring and alerting toolkit that collects metrics from configured targets at specified intervals. In this tutorial, we will explore how to create a custom Prometheus exporter in Python using `prometheus-client`, and integrate it with Prometheus and Grafana using Docker.
+
+## Technologies Used
+
+- Prometheus: A monitoring and alerting toolkit.
+- Grafana: A platform for analytics and monitoring.
+- Docker: Containerization platform for easy deployment.
+- `prometheus-client`: Python library for creating Prometheus exporters.
+
+## Architecture
+
+The architecture consists of the following components:
+
+- **Python Prometheus Exporter**: A custom exporter using `prometheus-client` to expose metrics.
+- **Prometheus Server**: Collects and stores time series data from exporters.
+- **Grafana**: Visualizes and analyzes metrics collected by Prometheus.
+
+
+## Implementation
+
+### Step 1: Setting Up the Python Prometheus Exporter
+
+#### 1.1 Install `prometheus-client`
+
+First, install the `prometheus-client` library using pip:
+
+```bash
+pip install prometheus-client
+
+```
+#### 1.2 Create a Python script to expose metrics
+Create a Python script prometheus_exporter.py:
+
+```python
+
+from prometheus_client import start_http_server, Gauge, Summary, Counter
+import random
+import time
+
+#Create a metric to track time spent and requests made.
+#Explain different types of metrics
+REQUEST_TIME = Gauge('request_processing_seconds', 'Time spent processing request')
+RESPONSE_TIME=Summary('response_processing_seconds', 'Time spent processing response')
+REQUEST_COUNTER=Counter('request_counter', 'Number of requests processed')
+
+#Decorate function with metric.
+@RESPONSE_TIME.time()
+def process_request(t):
+    REQUEST_TIME.set(t)
+    RESPONSE_TIME.observe(t)
+    REQUEST_COUNTER.inc()
+    time.sleep(random.random())
+
+#Start up the server to expose the metrics.
+start_http_server(8000)
+
+#Generate some requests.
+while True:
+    process_request(random.random())
+
+```
+This script creates three metrics: `request_processing_seconds`, `response_processing_seconds`, and `request_counter`. The `process_request` function simulates processing requests and increments the metrics accordingly.
+
+### Step 2: Dockerizing the Exporter
+#### 2.1 Create a Dockerfile
+Create a Dockerfile to build the exporter image:
+
+```Dockerfile
+FROM python:3.9-slim
+
+WORKDIR /app
+
+COPY prometheus_exporter.py .
+
+RUN pip install prometheus-client
+
+CMD ["python", "./prometheus_exporter.py"]
+```
+
+#### 2.2 Build and run the Docker image
+Build the Docker image using the following command:
+
+```bash
+docker build -t prometheus-exporter .
+```
+
+Run the Docker container:
+
+```bash
+docker run -d -p 8000:8000 prometheus-exporter
+```
+
+The exporter should now be accessible at http://localhost:8000/metrics.
+
+### Step 3: Integrating with Prometheus and Grafana
+
+#### 3.1 Docker Compose Configuration
+Create a docker-compose.yml file to configure Prometheus and Grafana:
+
+```yaml
+version: '3'
+
+services:
+
+  prometheus-exporter:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - 8000:8000
+  
+  prometheus:
+    image: prom/prometheus
+    container_name: prometheus
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - 9090:9090
+
+  grafana:
+    image: grafana/grafana
+    container_name: grafana
+    ports:
+      - 3000:3000
+```
+
+#### 3.2 Prometheus Configuration
+Create a prometheus.yml file to configure Prometheus:
+
+```yaml
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: prometheus
+    static_configs:
+      - targets: ['localhost:9090']
+  - job_name: python-exporter
+    static_configs:
+      - targets: ['prometheus-exporter:8000']
+```
+
+#### 3.3 Start the services
+Start the services using Docker Compose:
+
+```bash
+docker-compose up -d
+```
+Access Prometheus at http://localhost:9090 and Grafana at http://localhost:3000. Configure Prometheus as a data source in Grafana and create dashboards to visualize metrics.
+
+## Conclusion
+
+In this tutorial, we created a custom Prometheus exporter in Python using `prometheus-client` and integrated it with Prometheus and Grafana using Docker. This setup allows you to monitor and analyze custom metrics from your applications and services, providing valuable insights into system performance and health.

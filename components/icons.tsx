@@ -1,7 +1,7 @@
 import React from "react";
 import { cx } from "../utils";
 
-export const SunIcon = ({ className, ...rest }) => (
+export const SunIcon = ({ className, ...rest }: { className: any }) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     width="24"
@@ -157,7 +157,7 @@ export const SunIcon = ({ className, ...rest }) => (
   </svg>
 );
 
-export const MoonIcon = ({ className, ...rest }) => (
+export const MoonIcon = ({ className, ...rest }: { className: any }) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     width="24"
@@ -335,7 +335,7 @@ export const MoonIcon = ({ className, ...rest }) => (
   </svg>
 );
 
-export const LinkedinIcon = ({ className, ...rest }) => {
+export const LinkedinIcon = ({ className, ...rest }: { className: any }) => {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -364,7 +364,7 @@ export const LinkedinIcon = ({ className, ...rest }) => {
   );
 };
 
-export const TwitterIcon = ({ className, ...rest }) => {
+export const TwitterIcon = ({ className, ...rest }: { className: any }) => {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -389,7 +389,7 @@ export const TwitterIcon = ({ className, ...rest }) => {
   );
 };
 
-export const GithubIcon = ({ className, ...rest }) => {
+export const GithubIcon = ({ className, ...rest }: { className: any }) => {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"

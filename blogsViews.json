@@ -1,0 +1,9 @@
+{
+  "deploy_flask_app_with_uWSGI_and_nginx": 4,
+  "monitor_celery_with_prometheus_and_grafana": 6,
+  "progressive-web-apps-pwa": 2,
+  "monitor_django_app_with_prometheus_and_grafana": 4,
+  "create_python_prometheus_exporter": 2,
+  "setting-up-websocket-server-client-practical-guide": 7,
+  "create-your-own-ssl-certificate-authority-for-local-https-development": 7
+}

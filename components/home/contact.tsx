@@ -37,7 +37,7 @@ export default function Contact() {
   };
   return (
     <div
-      className="flex md:flex-row flex-col items-center justify-center max-w-4xl w-full mx-auto rounded-2xl p-4 md:p-8 shadow-input text-light dark:text-dark bg-dark dark:bg-light"
+      className="flex md:flex-row flex-col items-center justify-center max-w-4xl w-full mx-auto rounded-2xl mt-20 p-4 md:p-8 shadow-input text-light dark:text-dark bg-dark dark:bg-light"
       id="contact"
     >
       <div className="w-full md:w-1/2 md:my-10  ">

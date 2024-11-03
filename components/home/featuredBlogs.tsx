@@ -1,11 +1,25 @@
-import React from "react";
+"use client";
+import React, { useEffect, useState } from "react";
 import BlogLayoutOne from "../blog/BlogLayoutOne";
 import BlogLayoutTwo from "../blog/BlogLayoutTwo";
 import { sortBlogsByViews } from "@/utils";
 import { Blog } from "@/.contentlayer/generated";
 
-const FeaturedBlogs = async({ blogs }: { blogs: Blog[] }) => {
-  const sortedBlogs = await sortBlogsByViews(blogs);
+// const FeaturedBlogs = async({ blogs }: { blogs: Blog[] }) => {
+const FeaturedBlogs = ({ blogs }: { blogs: Blog[] }) => {
+  // const sortedBlogs = await sortBlogsByViews(blogs);
+
+  const [sortedBlogs, setSortedBlogs] = useState<Blog[]>(blogs);
+
+  useEffect(() => {
+    const fetchAndSortBlogs = async () => {
+      const sortedBlogs = await sortBlogsByViews(blogs);
+      setSortedBlogs(sortedBlogs);
+    };
+
+    fetchAndSortBlogs();
+  }, [blogs]);
+
   return (
     <section className="w-full mt-16 sm:mt-24  md:mt-32 px-5 sm:px-10 md:px-24  sxl:px-32 flex flex-col items-center justify-center">
       <h2 className="w-full inline-block font-bold capitalize text-2xl md:text-4xl text-dark dark:text-light">

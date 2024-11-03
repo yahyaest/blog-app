@@ -1,0 +1,47 @@
+version: "3.5"
+services:
+  front:
+    container_name: front
+    # image: blog-app-front-standalone:latest
+    # image: front-front:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+    #   dockerfile: Dockerfile.dev
+    restart: unless-stopped
+    ports:
+      - 3000:3000
+    environment:
+      - BASE_URL=http://blog-dev.com
+      - ENV=PROD
+    networks:
+      - blog-app-networks
+    stdin_open: true
+    volumes:
+      # - ./Front:/app
+      - ./entrypoint.sh:/code/entrypoint.sh
+      - ./blogsViews.json:/code/standalone/public/data/blogsViews.json
+    # entrypoint: /code/entrypoint.sh
+    command: sh -c "chmod +x /code/entrypoint.sh && /code/entrypoint.sh"
+
+  nginx:
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile
+    container_name: nginx
+    depends_on:
+      - front   
+    ports:
+      - "8080:80"
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf 
+    networks:
+      blog-app-networks:
+        ipv4_address: 192.168.112.3
+
+networks:
+  blog-app-networks:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 192.168.112.0/24

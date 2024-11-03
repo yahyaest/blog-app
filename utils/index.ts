@@ -1,6 +1,10 @@
 import { Blog } from "@/.contentlayer/generated";
 import { compareDesc, parseISO } from "date-fns";
 
+interface ExtendedBlog extends Blog {
+  views?: number;
+}
+
 export const cx = (...classNames: string[] | any[]) =>
   classNames.filter(Boolean).join(" ");
 
@@ -12,11 +16,11 @@ export const sortBlogsByDate = (blogs: Blog[]) => {
     );
 };
 
-export const sortBlogsByViews = async (blogs: Blog[]) => {
+export const sortBlogsByViews = async (blogs: ExtendedBlog[]) => {
   try {
     const blogsWithViews = [...blogs];
     // Fetch the blogsViews from the server
-    const response = await fetch("http://localhost:3000/api/blogsViews", {
+    const response = await fetch("/api/blogsViews", {
       cache: "no-store",
     });
     if (!response.ok) {
@@ -36,7 +40,7 @@ export const sortBlogsByViews = async (blogs: Blog[]) => {
     return blogsWithViews
       .filter((blog) => blog.isPublished)
       .slice()
-      .sort((a, b) => b.views - a.views);
+      .sort((a, b) => (b.views as number) - (a.views as number));
   } catch (e) {
     console.error("Failed to sort blogs by views:", e);
     return blogs;

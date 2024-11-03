@@ -8,7 +8,6 @@ export async function getCookiesSession() {
   try {
     const session = cookies().get("session")?.value;
     if (session) {
-      // console.log("Getting cookies session: ", session);
       return decodeFromBase64(session);
     }
     return null;
@@ -21,14 +20,13 @@ export async function getCookiesSession() {
 export async function setCookiesSession(payload: Object) {
   "use server";
   try {
-    console.log("Setting cookies");
     let session = cookies().get("session")?.value;
 
     if (!session || !objectDeepEqual(payload, decodeFromBase64(session))) {
       const encodedPayload = encodeToBase64(payload);
-      cookies().set("session", encodedPayload, {
-        httpOnly: true,
-        secure: true,
+      cookies().set("session", encodedPayload || "", {
+        // httpOnly: true,
+        // secure: true,
         maxAge: 60 * 60 * 24 * 7,
         sameSite: "strict",
         path: "/",

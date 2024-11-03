@@ -29,7 +29,7 @@ async function setVisitorViewedBlog(
       await setCookiesSession(newSessionCookie);
     }
 
-    if (!sessionCookie[blogSlug] && isFlagged) {
+    if (sessionCookie && !sessionCookie[blogSlug] && isFlagged) {
       sessionCookie[blogSlug] = true;
       await setCookiesSession(sessionCookie);
     }

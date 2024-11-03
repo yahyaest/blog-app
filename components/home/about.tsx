@@ -12,7 +12,7 @@ const About = () => {
        */}
       <div
         className="h-screen w-full bg-black-100 bg-grid-white/[0.03] 
-       absolute top-0 left-0 flex items-center justify-center"
+       absolute top-100 left-0 flex items-center justify-center"
       >
         {/* Radial gradient for the container to give a faded look */}
         <div
@@ -51,7 +51,7 @@ const About = () => {
             </div>
           </div>
 
-          <a href="#projects" className="mt-5">
+          <a href="https://yahyamachat.com" className="mt-5">
             <MagicButton
               title="Show my work"
               icon={<FaLocationArrow />}
